@@ -3,16 +3,31 @@ name: Deploy to Staging
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Migrate DB and Deploy (staging)
     runs-on: ubuntu-latest
 
-    environment:
-      name: staging     # 🔥 tem que estar exatamente aqui (no nível do job)
+    # 🔥 liga o job ao environment "staging"
+    environment: staging
+
+    # 🔥 injeta os secrets como variáveis de ambiente do job
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Sanity check (não vaza valor)
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "DATABASE_URL secret missing" && exit 1
+          fi
+          echo "DATABASE_URL is set (len=$(echo -n "$DATABASE_URL" | wc -c))"
 
       - name: Install dbmate
         run: |
@@ -20,14 +35,5 @@ jobs:
           sudo chmod +x /usr/local/bin/dbmate
           dbmate --version
 
-      - name: Sanity check DATABASE_URL secret
-        run: |
-          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
-            echo "DATABASE_URL secret missing" && exit 1
-          fi
-          echo "DATABASE_URL secret is present."
-
       - name: Run migrations on STAGING
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: dbmate up
