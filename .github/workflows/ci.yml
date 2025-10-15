@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -43,7 +43,12 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/amacneil/dbmate/main/install.sh | sh
           ./bin/dbmate --version
 
-      - name: Validate migrations syntax (no DB)
+      - name: Prepare tmp dir
+        run: mkdir -p tmp
+
+      - name: Validate migrations (sqlite)
+        env:
+          DATABASE_URL: sqlite:./tmp/ci.db
         run: ./bin/dbmate status
 
   staging-migrate:
