@@ -1,34 +1,6 @@
-name: Deploy to Staging
-
-on:
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    name: Migrate DB and Deploy (staging)
-    runs-on: ubuntu-latest
-
-    # 🔑 Torna os environment secrets do "staging" (incl. DATABASE_URL) disponíveis neste job
-    environment:
-      name: staging
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dbmate
-        run: |
-          curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
-          sudo chmod +x /usr/local/bin/dbmate
-          dbmate --version
-
-      - name: Sanity check DATABASE_URL secret
-        run: |
-          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
-            echo "DATABASE_URL secret missing" && exit 1
-          fi
-          echo "DATABASE_URL secret is present."
-
-      - name: Run migrations on STAGING
+      - name: Debug env visibility (TEMP)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}   # ✅ passa o secret como variável de ambiente
-        run: dbmate up
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # imprime “set” se a var veio do secrets (sem mostrar o valor)
+          if [ -n "${DATABASE_URL+x}" ]; then echo "DATABASE_URL is set"; else echo "DATABASE_URL is NOT set"; fi
