@@ -2,16 +2,15 @@ name: Deploy to Staging
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
   deploy:
     name: Migrate DB and Deploy (staging)
     runs-on: ubuntu-latest
 
-    # <— ESSENCIAL: conecta o job ao environment 'staging'
-    environment: staging
+    # 🔑 Torna os environment secrets do "staging" (incl. DATABASE_URL) disponíveis neste job
+    environment:
+      name: staging
 
     steps:
       - uses: actions/checkout@v4
@@ -30,4 +29,6 @@ jobs:
           echo "DATABASE_URL secret is present."
 
       - name: Run migrations on STAGING
-        run: dbmate --migrations-dir=db/migrations --no-dump-schema --url "${{ secrets.DATABASE_URL }}" up
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}   # ✅ passa o secret como variável de ambiente
+        run: dbmate up
