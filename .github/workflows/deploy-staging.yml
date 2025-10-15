@@ -10,7 +10,7 @@ jobs:
     name: Migrate DB and Deploy (staging)
     runs-on: ubuntu-latest
 
-    # IMPORTANTÍSSIMO: precisa apontar para o environment 'staging'
+    # <- ESSENCIAL: o nome tem que casar com o environment dos secrets (minúsculo mesmo)
     environment: staging
 
     steps:
@@ -22,7 +22,7 @@ jobs:
           sudo chmod +x /usr/local/bin/dbmate
           dbmate --version
 
-      # (opcional) checagem rápida de segredo (sem imprimir o valor)
+      # Checagem: NÃO imprime o segredo, só falha se tiver vazio
       - name: Sanity check DATABASE_URL secret
         run: |
           if [ -z "${{ secrets.DATABASE_URL }}" ]; then
@@ -31,7 +31,5 @@ jobs:
           echo "DATABASE_URL secret is present."
 
       - name: Run migrations on STAGING
-        # Passamos a URL via --url para não depender de env
+        # use --url para não depender de env herdado
         run: dbmate --migrations-dir=db/migrations --no-dump-schema --url "${{ secrets.DATABASE_URL }}" up
-
-      # ...demais passos (build/deploy) ...
