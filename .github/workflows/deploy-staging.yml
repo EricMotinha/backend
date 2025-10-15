@@ -1,4 +1,4 @@
-﻿name: Deploy to Staging
+name: Deploy to Staging
 
 on:
   workflow_dispatch:
@@ -6,50 +6,32 @@ on:
     branches: [ main ]
 
 jobs:
-  migrate-and-deploy:
+  deploy:
     name: Migrate DB and Deploy (staging)
     runs-on: ubuntu-latest
+
+    # IMPORTANTÍSSIMO: precisa apontar para o environment 'staging'
     environment: staging
-    permissions:
-      contents: read
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install dbmate
         run: |
-          sudo curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+          curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
           sudo chmod +x /usr/local/bin/dbmate
           dbmate --version
 
+      # (opcional) checagem rápida de segredo (sem imprimir o valor)
+      - name: Sanity check DATABASE_URL secret
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "DATABASE_URL secret missing" && exit 1
+          fi
+          echo "DATABASE_URL secret is present."
+
       - name: Run migrations on STAGING
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: dbmate up
+        # Passamos a URL via --url para não depender de env
+        run: dbmate --migrations-dir=db/migrations --no-dump-schema --url "${{ secrets.DATABASE_URL }}" up
 
-      # Opcional: build do backend (se aplicável)
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.18.3
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install deps (optional)
-        run: |
-          if [ -f package.json ]; then pnpm install --frozen-lockfile || pnpm install; fi
-
-      - name: Build (optional)
-        run: |
-          if [ -f package.json ]; then pnpm build || true; fi
-
-      # Placeholder de deploy — trocaremos pelo alvo real depois
-      - name: Deploy step (placeholder)
-        run: |
-          echo "Deploy para staging ainda não configurado."
-          echo "Migrations aplicadas em staging usando secrets.DATABASE_URL."
+      # ...demais passos (build/deploy) ...
