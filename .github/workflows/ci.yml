@@ -1,0 +1,65 @@
+﻿name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node (22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck / Build
+        run: pnpm run build
+
+      # (opcional) testes quando criarmos
+      # - name: Tests
+      #   run: pnpm test
+
+      - name: Install dbmate
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/amacneil/dbmate/main/install.sh | sh
+          ./bin/dbmate --version
+
+      - name: Validate migrations syntax (no DB)
+        run: ./bin/dbmate status
+
+  staging-migrate:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [ci]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install dbmate
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/amacneil/dbmate/main/install.sh | sh
+          ./bin/dbmate --version
+
+      - name: Apply migrations in STAGING
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: ./bin/dbmate up
