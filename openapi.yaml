@@ -1,0 +1,14 @@
+﻿openapi: 3.0.3
+info: { title: Casamenteiro API, version: 0.1.0 }
+servers: [ { url: http://localhost:3000 } ]
+paths:
+  /health: { get: { summary: Health, responses: { "200": { description: OK } } } }
+  /auth/register:
+    post:
+      summary: Cadastro simples por e-mail
+      requestBody:
+        required: true
+        content: { application/json: { schema:
+          { type: object, required: [email,password],
+            properties: { email: {type: string, format: email}, password: {type: string, minLength: 6} } } } }
+      responses: { "201": { description: Criado }, "400": { description: Inválido } }
