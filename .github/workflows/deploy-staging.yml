@@ -8,9 +8,8 @@ jobs:
     name: Migrate DB and Deploy (staging)
     runs-on: ubuntu-latest
 
-    # 🔑 Torna os environment secrets do "staging" (incl. DATABASE_URL) disponíveis neste job
     environment:
-      name: staging
+      name: staging     # 🔥 tem que estar exatamente aqui (no nível do job)
 
     steps:
       - uses: actions/checkout@v4
@@ -30,5 +29,5 @@ jobs:
 
       - name: Run migrations on STAGING
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}   # ✅ passa o secret como variável de ambiente
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: dbmate up
