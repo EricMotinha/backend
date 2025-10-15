@@ -4,10 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
-  },
+  "dev": "tsx watch src/index.ts",
+  "build": "tsc -p tsconfig.json",
+  "start": "node dist/index.js",
+
+  "db:new": "dbmate new",
+  "db:status": "dbmate status",
+  "db:up": "dbmate up",
+  "db:down": "dbmate down",
+  "db:redo": "dbmate redo"
+},
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
