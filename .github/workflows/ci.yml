@@ -11,10 +11,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # PNPM: deixa a versão ser lida do package.json (packageManager: "pnpm@10.x")
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
+          version: 10.18.3
           run_install: false
 
       - name: Setup Node
