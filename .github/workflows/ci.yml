@@ -7,28 +7,21 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # PNPM primeiro (instala binário no PATH)
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
 
-      # Node com cache de PNPM (agora PNPM existe, não dá erro)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
-
-      # (Opcional) Instalar deps do backend se necessário
-      # - name: Install deps
-      #   run: pnpm install --frozen-lockfile
+          cache: pnpm
 
       - name: Install dbmate
         run: |
@@ -41,5 +34,47 @@ jobs:
 
       - name: Validate migrations (sqlite)
         env:
-          DATABASE_URL: "sqlite:./tmp/ci.db"
+          DATABASE_URL: sqlite:./tmp/ci.db
         run: dbmate status
+
+  db:
+    runs-on: ubuntu-latest
+    needs: ci
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: casamenteiro_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/casamenteiro_ci?sslmode=disable
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dbmate
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+          sudo chmod +x /usr/local/bin/dbmate
+          dbmate --version
+
+      - name: Wait for DB
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U postgres && exit 0
+            echo "waiting for postgres..."
+            sleep 2
+          done
+          echo "postgres not ready" && exit 1
+
+      - name: Run migrations (Postgres)
+        run: dbmate up
