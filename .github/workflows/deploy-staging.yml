@@ -1,33 +1,24 @@
 name: Deploy to Staging
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
+on: { workflow_dispatch: {} }
 
 jobs:
   deploy:
     name: Migrate DB and Deploy (staging)
     runs-on: ubuntu-latest
-
-    # 🔥 liga o job ao environment "staging"
-    environment: staging
-
-    # 🔥 injeta os secrets como variáveis de ambiente do job
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+    environment: { name: staging }
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Sanity check (não vaza valor)
+      # Diagnóstico em "compile-time" (sem usar env) — falha se o secret não existe no contexto
+      - name: Check if secrets.DATABASE_URL exists (compile-time)
         run: |
-          if [ -z "${DATABASE_URL}" ]; then
-            echo "DATABASE_URL secret missing" && exit 1
+          echo "Has JWT_SECRET? -> ${{ secrets.JWT_SECRET != '' }}"
+          echo "Has DATABASE_URL? -> ${{ secrets.DATABASE_URL != '' }}"
+          if [ "${{ secrets.DATABASE_URL }}" = "" ]; then
+            echo "secrets.DATABASE_URL NOT FOUND in this workflow context"; exit 1
           fi
-          echo "DATABASE_URL is set (len=$(echo -n "$DATABASE_URL" | wc -c))"
+          echo "secrets.DATABASE_URL is visible to this workflow."
 
       - name: Install dbmate
         run: |
@@ -35,5 +26,14 @@ jobs:
           sudo chmod +x /usr/local/bin/dbmate
           dbmate --version
 
+      - name: Sanity check (runtime env)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "DATABASE_URL length: $(echo -n "$DATABASE_URL" | wc -c)"
+          [ -z "$DATABASE_URL" ] && echo "DATABASE_URL empty at runtime" && exit 1
+
       - name: Run migrations on STAGING
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: dbmate up
