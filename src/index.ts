@@ -1,4 +1,5 @@
-﻿import express from "express";
+import { env } from './config/env';
+import express from "express";
 import dotenv from "dotenv";
 import pino from "pino";
 import pinoHttp from "pino-http";
@@ -53,3 +54,6 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 app.listen(PORT, HOST, () => {
   console.log(`API ouvindo em http://${HOST}:${PORT}`);
 });
+
+app.listen({ host: env.HOST, port: env.PORT }, () => {
+  });

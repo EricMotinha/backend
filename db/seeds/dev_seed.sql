@@ -1,4 +1,4 @@
-﻿-- db/seeds/dev_seed.sql
+-- db/seeds/dev_seed.sql
 -- Seed seguro para DEV/STAGING (NÃO usar em produção)
 -- Requer: extensões e tabelas criadas pelas migrações iniciais
 
