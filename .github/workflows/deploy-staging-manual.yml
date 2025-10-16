@@ -12,8 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-        ref: ${{ github.sha }}   # garante o commit exato do workflow_dispatch
-        fetch-depth: 0           # pega histórico completo (útil p/ dbmate, tags, etc.)
+          ref: ${{ github.sha }}   # garante o commit exato do workflow_dispatch
+          fetch-depth: 0           # pega histórico completo (útil p/ dbmate, tags, etc.)
 
       # Verifica se os secrets existem no contexto do workflow (compile-time)
       - name: Check if secrets.DATABASE_URL exists (compile-time)
