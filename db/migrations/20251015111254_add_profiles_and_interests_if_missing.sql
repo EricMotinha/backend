@@ -1,11 +1,8 @@
 ﻿-- migrate:up
--- (seu SQL “para frente” aqui)
--- exemplos:
--- CREATE TABLE IF NOT EXISTS profiles (...);
--- CREATE TABLE IF NOT EXISTS interests (...);
--- ALTER TABLE ...;
+-- No-op: esta migração foi mantida apenas para satisfazer o dbmate.
+-- Seeds/ajustes reais movidos para uma próxima migração.
+SELECT 1;
 
 -- migrate:down
--- (seu SQL de rollback)
--- DROP TABLE IF EXISTS interests;
--- DROP TABLE IF EXISTS profiles;
+-- No-op de rollback.
+SELECT 1;
