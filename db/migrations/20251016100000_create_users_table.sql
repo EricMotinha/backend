@@ -1,4 +1,4 @@
-﻿-- migrate:up
+-- migrate:up
 CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid
 
 CREATE TABLE IF NOT EXISTS public.users (
