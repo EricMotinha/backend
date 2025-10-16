@@ -1,4 +1,4 @@
-name: Deploy to Staging
+﻿name: Deploy to Staging
 on: { workflow_dispatch: {} }
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Diagnóstico em "compile-time" (sem usar env) — falha se o secret não existe no contexto
+      # DiagnÃ³stico em "compile-time" (sem usar env) â€” falha se o secret nÃ£o existe no contexto
       - name: Check if secrets.DATABASE_URL exists (compile-time)
         run: |
           echo "Has JWT_SECRET? -> ${{ secrets.JWT_SECRET != '' }}"
@@ -31,7 +31,10 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           echo "DATABASE_URL length: $(echo -n "$DATABASE_URL" | wc -c)"
-          [ -z "$DATABASE_URL" ] && echo "DATABASE_URL empty at runtime" && exit 1
+          if [ -z "\" ]; then
+  echo "DATABASE_URL empty at runtime"
+  exit 1
+fi
 
       - name: Run migrations on STAGING
         env:
