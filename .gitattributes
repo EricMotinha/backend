@@ -1,13 +1,10 @@
-﻿# Padronização de EOL no repo
-* text=auto eol=lf
+﻿* text=auto
 
-# YAML e SQL sempre LF (compatíveis com Linux)
+# Force LF for linux-friendly files
 *.yml  text eol=lf
 *.yaml text eol=lf
 *.sql  text eol=lf
-
-# Shells Linux sempre LF
 *.sh   text eol=lf
 
-# Opcional: PowerShell com CRLF (se preferir no Windows)
+# Keep CRLF for PowerShell (optional)
 *.ps1  text eol=crlf
