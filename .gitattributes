@@ -1,3 +1,13 @@
-﻿# Force LF for workflow files
-*.yml text eol=lf
+﻿# Padronização de EOL no repo
+* text=auto eol=lf
+
+# YAML e SQL sempre LF (compatíveis com Linux)
+*.yml  text eol=lf
 *.yaml text eol=lf
+*.sql  text eol=lf
+
+# Shells Linux sempre LF
+*.sh   text eol=lf
+
+# Opcional: PowerShell com CRLF (se preferir no Windows)
+*.ps1  text eol=crlf
