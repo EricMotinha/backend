@@ -1,4 +1,4 @@
-﻿name: Deploy to Staging (manual)
+﻿﻿name: Deploy to Staging (manual)
 
 on:
   workflow_dispatch:
