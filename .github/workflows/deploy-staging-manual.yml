@@ -11,6 +11,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+        ref: ${{ github.sha }}   # garante o commit exato do workflow_dispatch
+        fetch-depth: 0           # pega histórico completo (útil p/ dbmate, tags, etc.)
 
       # Verifica se os secrets existem no contexto do workflow (compile-time)
       - name: Check if secrets.DATABASE_URL exists (compile-time)
@@ -27,6 +30,17 @@ jobs:
           curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
           sudo chmod +x /usr/local/bin/dbmate
           dbmate --version
+
+      - name: Inspect migration files (sanity)
+        run: |
+          echo "First 5 lines of last migration:"
+          last=$(ls -1 db/migrations/*.sql | sort | tail -n1)
+          echo ">> $last"
+          head -n 5 "$last"
+          echo "First 3 bytes (should NOT be EF BB BF):"
+          od -An -t x1 -N 3 "$last" | tr -d ' \n'; echo
+          echo "Checking for migrate:up/down markers:"
+          grep -nE '^-- migrate:(up|down)$' "$last"
 
       - name: Sanity check (runtime env)
         env:
