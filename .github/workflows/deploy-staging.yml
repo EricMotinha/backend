@@ -1,5 +1,8 @@
-﻿name: Deploy to Staging
-on: { workflow_dispatch: {} }
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
 
 jobs:
   deploy:
