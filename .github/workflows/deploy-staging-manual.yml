@@ -1,4 +1,4 @@
-﻿﻿name: Deploy to Staging (manual)
+name: Deploy to Staging (manual)
 
 on:
   workflow_dispatch:
@@ -15,7 +15,6 @@ jobs:
           ref: ${{ github.sha }}   # garante o commit exato do workflow_dispatch
           fetch-depth: 0           # pega histórico completo (útil p/ dbmate, tags, etc.)
 
-      # Verifica se os secrets existem no contexto do workflow (compile-time)
       - name: Check if secrets.DATABASE_URL exists (compile-time)
         run: |
           echo "Has JWT_SECRET? -> ${{ secrets.JWT_SECRET != '' }}"
@@ -57,4 +56,4 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: dbmate up
 
-      # TODO: se tiver um step de deploy (ex: Fly.io, Render, Docker, etc.), adicione aqui
+      # TODO: steps de deploy aqui (Fly/Render/Docker/etc.)
