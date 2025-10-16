@@ -1,4 +1,4 @@
-﻿-- migrate:up
+-- migrate:up
 -- No-op temporário para destravar o CI. Ajustes reais virão numa nova migração.
 SELECT 1;
 
