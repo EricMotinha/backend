@@ -1,6 +1,5 @@
 ﻿-- migrate:up
--- No-op: esta migração foi mantida apenas para satisfazer o dbmate.
--- Seeds/ajustes reais movidos para uma próxima migração.
+-- No-op temporário para destravar o CI. Ajustes reais virão numa nova migração.
 SELECT 1;
 
 -- migrate:down
