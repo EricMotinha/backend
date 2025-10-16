@@ -40,3 +40,4 @@ fi
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: dbmate up
+
