@@ -1,4 +1,4 @@
-name: Deploy to Staging (manual)
+﻿name: Deploy to Staging (manual)
 
 on:
   workflow_dispatch:
@@ -12,25 +12,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}   # garante o commit exato do workflow_dispatch
-          fetch-depth: 0           # pega histórico completo (útil p/ dbmate, tags, etc.)
+          ref: ${{ github.sha }}
+          fetch-depth: 0
 
-      - name: Check if secrets.DATABASE_URL exists (compile-time)
+      - name: Check if required secrets exist (compile-time)
         run: |
           echo "Has JWT_SECRET? -> ${{ secrets.JWT_SECRET != '' }}"
-          echo "Has DATABASE_URL? -> ${{ secrets.DATABASE_URL != '' }}"
-          if [ "${{ secrets.DATABASE_URL }}" = "" ]; then
-            echo "secrets.DATABASE_URL NOT FOUND in this workflow context"; exit 1
+          echo "Has STAGING_DATABASE_URL? -> ${{ secrets.STAGING_DATABASE_URL != '' }}"
+          if [ "${{ secrets.STAGING_DATABASE_URL }}" = "" ]; then
+            echo "secrets.STAGING_DATABASE_URL NOT FOUND in this workflow context"; exit 1
           fi
-          echo "secrets.DATABASE_URL is visible to this workflow."
+          echo "STAGING_DATABASE_URL is visible to this workflow."
 
-      - name: Install dbmate
+      - name: Install dbmate + psql client
         run: |
           curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
           sudo chmod +x /usr/local/bin/dbmate
           dbmate --version
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
 
-      - name: Inspect migration files (sanity)
+      - name: Inspect last migration (sanity)
         run: |
           echo "First 5 lines of last migration:"
           last=$(ls -1 db/migrations/*.sql | sort | tail -n1)
@@ -43,17 +45,29 @@ jobs:
 
       - name: Sanity check (runtime env)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
           echo "DATABASE_URL length: $(echo -n "$DATABASE_URL" | wc -c)"
           if [ -z "${DATABASE_URL:-}" ]; then
-            echo "DATABASE_URL empty at runtime"
-            exit 1
+            echo "DATABASE_URL empty at runtime"; exit 1
           fi
+          # falha se apontar pra localhost
+          if echo "$DATABASE_URL" | grep -qiE '@(localhost|127\.0\.0\.1)[:/]?'; then
+            echo "Refusing to run against localhost in CI"; exit 1
+          fi
+          # imprime a URL mascarada (sem credenciais)
+          masked=$(echo "$DATABASE_URL" | sed -E 's#://[^:@/]+(:[^@/]+)?@#://***:***@#')
+          echo "Using: $masked"
+
+      - name: Smoke test connection (psql SELECT now())
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -tAc "select now();"
 
       - name: Run migrations on STAGING
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: dbmate up
 
       # TODO: steps de deploy aqui (Fly/Render/Docker/etc.)
