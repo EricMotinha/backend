@@ -13,9 +13,9 @@ primary_region = "gru"
   processes = ["app"]
 
 [[services]]
-  protocol = "tcp"
   internal_port = 8080
+  protocol = "tcp"
   [[services.ports]]
-    port = 80
+    port = "80"
   [[services.ports]]
-    port = 443
+    port = "443"
