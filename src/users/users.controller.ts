@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, ParseUUIDPipe } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./dtos/user.dto";
@@ -9,7 +9,7 @@ export class UsersController {
   constructor(private readonly service: UsersService) {}
 
   @Get(":id")
-  get(@Param("id") id: string) {
+  get(@Param("id", new ParseUUIDPipe({ version: "4" })) id: string) {
     return this.service.get(id);
   }
 
