@@ -1,60 +1,55 @@
-﻿name: Deploy to Staging (manual)
+name: Deploy Staging
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
-  migrate_and_deploy_staging:
-    name: Migrate DB and Deploy (staging)
+  migrate-and-deploy:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: casamenteiro_staging
-        ports:
-          - 5432:5432
-        # healthcheck para garantir que o DB está pronto
-        options: >-
-          --health-cmd "pg_isready -U postgres -d casamenteiro_staging"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 12
+    environment: { name: staging }
+    defaults:
+      run:
+        working-directory: ./backend
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
+          node-version: 20
 
-      - name: Verify secrets presence (compile-time)
-        run: |
-          echo "Has JWT_SECRET? -> ${{ secrets.JWT_SECRET != '' }}"
-          echo "Has DATABASE_URL? -> ${{ secrets.DATABASE_URL != '' }}"
-          if [ "${{ secrets.DATABASE_URL }}" = "" ]; then
-            echo "secrets.DATABASE_URL NOT FOUND in this workflow context"; exit 1
-          fi
-
-      - name: Install dbmate
+      - name: Install dbmate + psql
         run: |
           curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
           sudo chmod +x /usr/local/bin/dbmate
-          dbmate --version
+          sudo apt-get update -y && sudo apt-get install -y postgresql-client
 
-      - name: Wait for Postgres service healthy
-        run: |
-          for i in {1..30}; do
-            if pg_isready -h 127.0.0.1 -p 5432 -U postgres -d casamenteiro_staging; then
-              echo "Postgres is ready"; break
-            fi
-            echo "Waiting Postgres ($i/30)..."; sleep 2
-          done
-
-      - name: Run migrations on STAGING
+      - name: Sanity (DATABASE_URL)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          dbmate up
+          [ -z "$DATABASE_URL" ] && echo "DATABASE_URL vazio" && exit 1
+          if echo "$DATABASE_URL" | grep -qiE '@(localhost|127\.0\.0\.1)'; then
+            echo "Recusando localhost em CI"; exit 1
+          fi
+
+      - name: Smoke test psql
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: psql "$DATABASE_URL" -tAc "select 1;"
+
+      - name: Run migrations (dbmate up)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: dbmate up
+
+      - name: Deploy to Fly
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          export FLYCTL_INSTALL="$HOME/.fly"
+          export PATH="$FLYCTL_INSTALL/bin:$PATH"
+          flyctl deploy --remote-only --config ./fly.toml --app backend-jdzi8w

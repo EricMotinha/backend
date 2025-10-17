@@ -8,21 +8,27 @@ jobs:
     name: Migrate DB and Deploy (staging)
     runs-on: ubuntu-latest
     environment: { name: staging }
+    env:
+      FLY_APP: backend-jdzi8w  # <-- nome da app no Fly
 
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: main
           fetch-depth: 0
 
       - name: Check if required secrets exist (compile-time)
         run: |
           echo "Has JWT_SECRET? -> ${{ secrets.JWT_SECRET != '' }}"
           echo "Has STAGING_DATABASE_URL? -> ${{ secrets.STAGING_DATABASE_URL != '' }}"
+          echo "Has FLY_API_TOKEN? -> ${{ secrets.FLY_API_TOKEN != '' }}"
           if [ "${{ secrets.STAGING_DATABASE_URL }}" = "" ]; then
-            echo "secrets.STAGING_DATABASE_URL NOT FOUND in this workflow context"; exit 1
+            echo "secrets.STAGING_DATABASE_URL NOT FOUND"; exit 1
           fi
-          echo "STAGING_DATABASE_URL is visible to this workflow."
+          if [ "${{ secrets.FLY_API_TOKEN }}" = "" ]; then
+            echo "secrets.FLY_API_TOKEN NOT FOUND"; exit 1
+          fi
+          echo "All compile-time secrets are present."
 
       - name: Install dbmate + psql client
         run: |
@@ -48,26 +54,41 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
           echo "DATABASE_URL length: $(echo -n "$DATABASE_URL" | wc -c)"
-          if [ -z "${DATABASE_URL:-}" ]; then
-            echo "DATABASE_URL empty at runtime"; exit 1
-          fi
-          # falha se apontar pra localhost
+          if [ -z "${DATABASE_URL:-}" ]; then echo "DATABASE_URL empty"; exit 1; fi
           if echo "$DATABASE_URL" | grep -qiE '@(localhost|127\.0\.0\.1)[:/]?'; then
             echo "Refusing to run against localhost in CI"; exit 1
           fi
-          # imprime a URL mascarada (sem credenciais)
           masked=$(echo "$DATABASE_URL" | sed -E 's#://[^:@/]+(:[^@/]+)?@#://***:***@#')
           echo "Using: $masked"
 
       - name: Smoke test connection (psql SELECT now())
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        run: |
-          psql "$DATABASE_URL" -tAc "select now();"
+        run: psql "$DATABASE_URL" -tAc "select now();"
 
       - name: Run migrations on STAGING
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: dbmate up
 
-      # TODO: steps de deploy aqui (Fly/Render/Docker/etc.)
+      # ---------- DEPLOY NO FLY.IO ----------
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@v1
+
+      - name: Ensure Fly secrets are set (idempotent)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          set -e
+          flyctl secrets set \
+            JWT_SECRET="$JWT_SECRET" \
+            DATABASE_URL="$DATABASE_URL" \
+            --app "$FLY_APP"
+
+      - name: Deploy app to Fly (staging)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl deploy --remote-only --app "$FLY_APP"
