@@ -11,13 +11,16 @@ primary_region = "gru"
   internal_port = 8080
   force_https = true
   auto_start_machines = true
-  auto_stop_machines = true
-  min_machines_running = 0
+  auto_stop_machines = false   # <— manter ligado
+  min_machines_running = 1     # <— ao menos 1 VM ativa
   processes = ["app"]
-  [http_service.concurrency]
-    type = "requests"
-    soft_limit = 20
-    hard_limit = 25
+
+  [[http_service.checks]]
+    type = "http"
+    interval = "10s"
+    timeout = "2s"
+    method = "GET"
+    path = "/healthz"
 
 [checks]
   [checks.status]
