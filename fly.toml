@@ -1,5 +1,13 @@
 app = "backend-jdzi8w"
+primary_region = "gru"
 
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+# PUBLICA a porta 8080 para a internet
 [http_service]
   internal_port = 8080
   force_https = true
@@ -8,8 +16,20 @@ app = "backend-jdzi8w"
   min_machines_running = 0
   processes = ["app"]
 
-  [[http_service.checks]]
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 25
+
+# (opcional, mas recomendado) healthcheck HTTP
+[checks]
+  [checks.http]
+    port = 8080
+    path = "/healthz"
     interval = "10s"
     timeout = "2s"
-    method = "GET"
-    path = "/healthz"
+
+# (opcional) tamanho da VM
+[[vm]]
+  size = "shared-cpu-1x"
+  memory_mb = 256
