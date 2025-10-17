@@ -1,9 +1,10 @@
-import { Body, Controller, Post, Req, Res, UnauthorizedException } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Post, Req, Res, UnauthorizedException, UseGuards, Get } from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 import { LoginDto, SignupDto } from "./dtos/auth.dto";
 import { JwtService } from "@nestjs/jwt";
+import { JwtAuthGuard } from "./jwt.guard";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -29,7 +30,6 @@ export class AuthController {
     const cookie = req.cookies?.rt as string | undefined;
     if (!cookie) throw new UnauthorizedException("missing cookie");
 
-    // valida o JWT de refresh e extrai sub (userId) + jti
     const payload = await this.jwt.verifyAsync<{ sub: string; jti: string }>(cookie, {
       secret: process.env.REFRESH_SECRET as string,
     });
@@ -47,9 +47,16 @@ export class AuthController {
         await this.svc.logout(payload.sub, payload.jti);
       } catch {}
     }
-    // limpa cookie
     res.clearCookie("rt");
     return { ok: true };
+  }
+
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  me(@Req() req: Request) {
+    const user = (req as any).user as { userId: string; email: string };
+    return { userId: user.userId, email: user.email };
   }
 
   private setRefreshCookie(res: Response, token: string) {
@@ -61,15 +68,4 @@ export class AuthController {
       path: "/",
     });
   }
-}
-
-import { UseGuards, Get } from "@nestjs/common";
-import { JwtAuthGuard } from "./jwt.guard";
-
-@Get("me")
-@UseGuards(JwtAuthGuard)
-me(@Req() req: Request) {
-  // req["user"] foi preenchido pelo JwtStrategy.validate()
-  const user = (req as any).user as { userId: string; email: string };
-  return { userId: user.userId, email: user.email };
 }
