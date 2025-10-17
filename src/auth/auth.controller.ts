@@ -62,3 +62,14 @@ export class AuthController {
     });
   }
 }
+
+import { UseGuards, Get } from "@nestjs/common";
+import { JwtAuthGuard } from "./jwt.guard";
+
+@Get("me")
+@UseGuards(JwtAuthGuard)
+me(@Req() req: Request) {
+  // req["user"] foi preenchido pelo JwtStrategy.validate()
+  const user = (req as any).user as { userId: string; email: string };
+  return { userId: user.userId, email: user.email };
+}

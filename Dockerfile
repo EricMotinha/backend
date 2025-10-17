@@ -15,3 +15,6 @@ COPY --from=build /app/package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 CMD ["node", "dist/main.js"]
+
+# Dependência de runtime para o argon2 nativo
+RUN apk add --no-cache libstdc++
