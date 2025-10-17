@@ -3,15 +3,15 @@ import { AppModule } from "./app.module";
 import helmet from "helmet";
 import * as cors from "cors";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import * as cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  // segurança básica + CORS liberado por enquanto (ajustamos depois)
   app.use(helmet());
-  app.use(cors());
+  app.use(cors({ origin: true, credentials: true })); // vamos usar cookie httpOnly
+  app.use(cookieParser());
 
-  // Swagger
   const config = new DocumentBuilder()
     .setTitle("Casamenteiro API")
     .setDescription("API v1 - endpoints públicos da aplicação")
@@ -24,5 +24,4 @@ async function bootstrap() {
   await app.listen(port as number, "0.0.0.0");
   console.log(`API listening on :${port}`);
 }
-
 bootstrap();
