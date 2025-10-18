@@ -1,42 +1,52 @@
-import { Body, Controller, Get, Headers, Param, Post, ParseIntPipe } from '@nestjs/common';
-import { DbService } from '../db.service';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Sse,
+  MessageEvent,
+} from '@nestjs/common';
+import { Observable, from } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { ChatService } from './chat.service';
-import { ConversationsService } from '../conversations/conversations.service';
-import { Sse, MessageEvent } from '@nestjs/common';
-import { Observable, from, filter, switchMap } from 'rxjs';
 import { ChatEvents } from './chat.gateway';
-
-@Sse(':matchId/stream')
-stream(@Param('matchId', ParseIntPipe) matchId: number): Observable<MessageEvent> {
-  return from(this.convs.getOrCreateByMatch(matchId)).pipe(
-    switchMap((conv) => this.events.stream(conv.id)),
-    filter(Boolean) as any,
-  );
-}
+import { ConversationsService } from '../conversations/conversations.service';
 
 @Controller('chat')
 export class ChatController {
   constructor(
     private readonly chat: ChatService,
-    private readonly convs: ConversationsService,
-    private readonly db: DbService,
+    private readonly events: ChatEvents,
+    private readonly convs: ConversationsService, // <-- sem "?"
   ) {}
 
   @Post(':matchId/message')
-  async send(
+  async postMessage(
     @Param('matchId', ParseIntPipe) matchId: number,
-    @Headers('x-user-id') userId: string,
-    @Body() body: { body: string },
+    @Body('body') body: string,
   ) {
-    return this.chat.sendMessage(matchId, userId, body.body);
+    // TODO: pegar senderId do seu guard/header (mantive exemplo simples)
+    const senderId = '11111111-1111-1111-1111-111111111111';
+    return this.chat.sendMessage(matchId, senderId, body);
   }
 
   @Get(':matchId')
-  async history(
+  async listMessages(@Param('matchId', ParseIntPipe) matchId: number) {
+    const conv = await this.convs.getOrCreateByMatch(matchId);
+    // Se você já tem um método no service, use-o; senão, retorne algo simples
+    return this.chat.getMessagesByConversationId
+      ? this.chat.getMessagesByConversationId(conv.id)
+      : { conversationId: conv.id };
+  }
+
+  @Sse(':matchId/stream')
+  stream(
     @Param('matchId', ParseIntPipe) matchId: number,
-  ) {
-    const conv = await this.convs.findByMatch(matchId);
-    if (!conv) return [];
-    return this.convs.listMessages(conv.id, 50);
+  ): Observable<MessageEvent> {
+    return from(this.convs.getOrCreateByMatch(matchId)).pipe(
+      switchMap((conv) => this.events.stream(conv.id)),
+    );
   }
 }

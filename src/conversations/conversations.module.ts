@@ -5,6 +5,6 @@ import { ConversationsService } from './conversations.service';
 @Module({
   imports: [DbModule],
   providers: [ConversationsService],
-  exports: [ConversationsService],
+  exports: [ConversationsService], // <-- IMPORTANTE
 })
 export class ConversationsModule {}

@@ -12,19 +12,24 @@ import { MatchesModule } from "./matches/matches.module";
 import { ChatModule } from "./chat/chat.module";
 import { LocationsModule } from "./locations/locations.module";
 import { NotificationsModule } from './notifications/notifications.module';
+import { ConversationsModule } from './conversations/conversations.module';
+
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    DbModule,
-    NotificationsModule,
-    ConversationsModule,
-    ChatModule,	
-    UsersModule,
-    AuthModule,
-    ProfilesModule,
-    PreferencesModule,
-    LocationsModule, DiscoveryModule, SwipesModule, MatchesModule, ChatModule, NotificationsModule,],
+  DbModule,
+  NotificationsModule,
+  ConversationsModule, // <-- aqui
+  ChatModule,
+  UsersModule,
+  ProfilesModule,
+  PreferencesModule,
+  LocationsModule,
+  DiscoveryModule,
+  SwipesModule,
+  MatchesModule,
+  AuthModule,
+],
   controllers: [AppController],
 })
 export class AppModule {}

@@ -8,9 +8,9 @@ import { ChatEvents } from './chat.gateway';
 export class ChatService {
   constructor(
     private readonly db: DbService,
-    private readonly convs: ConversationsService,
+    private readonly convs: ConversationsService, // <-- sem "?"
     private readonly notifications: NotificationsService,
-    private readonly events: ChatEvents,   // <-- adicionar
+    private readonly events: ChatEvents,
   ) {}
 
   async sendMessage(matchId: number, senderId: string, body: string) {
