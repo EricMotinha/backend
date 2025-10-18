@@ -13,6 +13,16 @@ export class ChatService {
     private readonly events: ChatEvents,
   ) {}
 
+ async getMessagesByConversationId(conversationId: number) {
+  // IMPLEMENTAÇÃO REAL (se você usa Prisma):
+  // return this.db.message.findMany({
+  //   where: { conversationId },
+  //   orderBy: { createdAt: 'asc' },
+  // });
+
+  // Placeholder temporário para compilar e subir:
+  return [];
+ }
   async sendMessage(matchId: number, senderId: string, body: string) {
     const conv = await this.convs.getOrCreateByMatch(matchId);
 
