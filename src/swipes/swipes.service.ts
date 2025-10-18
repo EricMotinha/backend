@@ -12,7 +12,7 @@ export class SwipesService {
     await this.db.query(
       `insert into swipes (swiper_id, target_id, direction)
        values ($1::uuid, $2::uuid, $3::swipe_dir)`,
-      [swiperId, targetId, direction === "like" ? "like" : "dislike"]
+      [swiperId, targetId, direction] // "like" | "dislike"
     );
 
     // cria match se já houver "like" recíproco

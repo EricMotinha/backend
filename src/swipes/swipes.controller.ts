@@ -1,6 +1,5 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post, Headers } from "@nestjs/common";
 import { SwipesService } from "./swipes.service";
-import { UserId } from "../auth/user-id.decorator";
 
 type DirectionIn = "like" | "dislike" | "superlike" | "pass";
 
@@ -10,7 +9,7 @@ export class SwipesController {
 
   @Post()
   create(
-    @UserId() userId: string,
+    @Headers("x-user-id") userId: string,
     @Body() dto: { targetId: string; direction: DirectionIn }
   ) {
     // Qualquer coisa diferente de "like" vira "dislike"
@@ -21,7 +20,7 @@ export class SwipesController {
   }
 
   @Get("recent")
-  recent(@UserId() userId: string) {
+  recent(@Headers("x-user-id") userId: string) {
     return this.svc.recent(userId);
   }
 }
