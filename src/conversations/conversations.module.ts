@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
+import { DbModule } from '../db.module';
 import { ConversationsService } from './conversations.service';
-import { ConversationsController } from './conversations.controller';
 
 @Module({
+  imports: [DbModule],
   providers: [ConversationsService],
-  controllers: [ConversationsController]
+  exports: [ConversationsService],
 })
 export class ConversationsModule {}

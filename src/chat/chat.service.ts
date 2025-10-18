@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DbService } from '../db.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ChatEvents } from './chat.gateway';
 
 @Injectable()
 export class ChatService {
@@ -9,6 +10,7 @@ export class ChatService {
     private readonly db: DbService,
     private readonly convs: ConversationsService,
     private readonly notifications: NotificationsService,
+    private readonly events: ChatEvents,   // <-- adicionar
   ) {}
 
   async sendMessage(matchId: number, senderId: string, body: string) {
@@ -22,21 +24,24 @@ export class ChatService {
     );
     const msg = rows[0];
 
-    // Descobrir o destinatário a partir do match
     const { rows: mRows } = await this.db.query(
       `SELECT user_a, user_b FROM matches WHERE id=$1`,
       [matchId],
     );
     const m = mRows[0];
-    const recipient =
-      m.user_a === senderId ? m.user_b : m.user_a;
+    const recipient = m.user_a === senderId ? m.user_b : m.user_a;
 
-    // notificação in-app
     await this.notifications.create(recipient, 'message', {
       matchId,
       conversationId: conv.id,
       preview: body.slice(0, 120),
       from: senderId,
+    });
+
+    // publicar no SSE
+    this.events.publish({
+      conversationId: conv.id,
+      payload: { type: 'message', data: msg },
     });
 
     return msg;

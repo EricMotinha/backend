@@ -17,6 +17,9 @@ import { NotificationsModule } from './notifications/notifications.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DbModule,
+    NotificationsModule,
+    ConversationsModule,
+    ChatModule,	
     UsersModule,
     AuthModule,
     ProfilesModule,
@@ -25,4 +28,6 @@ import { NotificationsModule } from './notifications/notifications.module';
   controllers: [AppController],
 })
 export class AppModule {}
+
+
 

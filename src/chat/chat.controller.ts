@@ -2,6 +2,17 @@ import { Body, Controller, Get, Headers, Param, Post, ParseIntPipe } from '@nest
 import { DbService } from '../db.service';
 import { ChatService } from './chat.service';
 import { ConversationsService } from '../conversations/conversations.service';
+import { Sse, MessageEvent } from '@nestjs/common';
+import { Observable, from, filter, switchMap } from 'rxjs';
+import { ChatEvents } from './chat.gateway';
+
+@Sse(':matchId/stream')
+stream(@Param('matchId', ParseIntPipe) matchId: number): Observable<MessageEvent> {
+  return from(this.convs.getOrCreateByMatch(matchId)).pipe(
+    switchMap((conv) => this.events.stream(conv.id)),
+    filter(Boolean) as any,
+  );
+}
 
 @Controller('chat')
 export class ChatController {
