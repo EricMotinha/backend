@@ -7,5 +7,6 @@ import { DbModule } from "../db.module";
   imports: [DbModule],
   controllers: [SwipesController],
   providers: [SwipesService],
+  exports: [SwipesService],
 })
 export class SwipesModule {}

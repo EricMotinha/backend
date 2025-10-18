@@ -1,4 +1,3 @@
-// src/discovery/discovery.service.ts
 import { Injectable } from "@nestjs/common";
 import { DbService } from "../db.service";
 
@@ -9,17 +8,17 @@ export class DiscoveryService {
   async getCandidates(userId: string) {
     const { rows } = await this.db.query(
       `
-      select u.id
-      from users u
-      where u.id <> $1::uuid
-        and not exists (
-          select 1
-          from swipes s
-          where s.swiper_id = $1::uuid
-            and s.target_id = u.id
+      SELECT u.id
+      FROM users u
+      WHERE u.id <> $1::uuid
+        AND NOT EXISTS (
+          SELECT 1
+          FROM swipes s
+          WHERE s.swiper_id = $1::uuid
+            AND s.target_id = u.id
         )
-      order by u.created_at desc
-      limit 20
+      ORDER BY u.created_at DESC
+      LIMIT 20
       `,
       [userId]
     );
