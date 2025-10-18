@@ -1,3 +1,4 @@
+// src/discovery/discovery.service.ts
 import { Injectable } from "@nestjs/common";
 import { DbService } from "../db.service";
 
@@ -8,7 +9,7 @@ export class DiscoveryService {
   async getCandidates(userId: string) {
     const { rows } = await this.db.query(
       `
-      select u.id, u.name, u.created_at
+      select u.id
       from users u
       where u.id <> $1::uuid
         and not exists (

@@ -1,49 +1,41 @@
-import { Injectable } from "@nestjs/common";
-import { DbService } from "../db.service";
+// src/swipes/swipes.service.ts
+async createSwipe(swiperId: string, targetId: string, direction: "like" | "dislike") {
+  // grava/atualiza o swipe
+  await this.db.query(
+    `
+    insert into swipes (swiper_id, target_id, direction)
+    values ($1::uuid, $2::uuid, $3::swipe_dir)
+    on conflict (swiper_id, target_id)
+    do update set direction = excluded.direction, updated_at = now()
+    `,
+    [swiperId, targetId, direction]
+  );
 
-type SwipeDirection = "like" | "dislike" | "superlike";
-
-@Injectable()
-export class SwipesService {
-  constructor(private readonly db: DbService) {}
-
-  async createSwipe(swiperId: string, targetId: string, direction: SwipeDirection) {
-    // grava respeitando o enum swipe_dir
-    await this.db.query(
-      `insert into swipes (swiper_id, target_id, direction)
-       values ($1::uuid, $2::uuid, $3::swipe_dir)`,
-      [swiperId, targetId, direction] // "like" | "dislike"
+  // se deu "like", verifica recíproco e cria match
+  if (direction === "like") {
+    const { rows: recip } = await this.db.query(
+      `
+      select 1
+      from swipes
+      where swiper_id = $1::uuid
+        and target_id = $2::uuid
+        and direction = 'like'::swipe_dir
+      `,
+      [targetId, swiperId]
     );
 
-    // cria match se já houver "like" recíproco
-    const match = await this.db.query<{ id: number }>(
-      `with mutual as (
-         select 1
-         from swipes
-         where swiper_id = $2::uuid
-           and target_id = $1::uuid
-           and direction = 'like'::swipe_dir
-       )
-       insert into matches (user_a, user_b)
-       select least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid)
-       where exists (select 1 from mutual)
-       on conflict do nothing
-       returning id`,
-      [swiperId, targetId]
-    );
-
-    return { ok: true, matched: match.rowCount > 0, matchId: match.rows[0]?.id };
+    if (recip.length > 0) {
+      // cria o match se ainda não existir
+      await this.db.query(
+        `
+        insert into matches (user_a, user_b)
+        values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid))
+        on conflict (user_a, user_b) do nothing
+        `,
+        [swiperId, targetId]
+      );
+    }
   }
 
-  async recent(userId: string) {
-    const { rows } = await this.db.query(
-      `select id, swiper_id, target_id, direction, created_at
-       from swipes
-       where swiper_id = $1::uuid
-       order by created_at desc
-       limit 20`,
-      [userId]
-    );
-    return rows;
-  }
+  return { ok: true };
 }
