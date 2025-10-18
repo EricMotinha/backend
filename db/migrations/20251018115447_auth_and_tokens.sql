@@ -1,5 +1,10 @@
 -- migrate:up
 
+
+
+-- Garante a extensão usada em user_credentials.email
+CREATE EXTENSION IF NOT EXISTS citext;
+
 -- Credenciais (para login por email/senha; pode coexistir com OAuth no futuro)
 CREATE TABLE IF NOT EXISTS public.user_credentials (
   user_id            uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
@@ -21,7 +26,9 @@ CREATE TABLE IF NOT EXISTS public.refresh_tokens (
   revoked_at         timestamptz
 );
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON public.refresh_tokens(user_id);
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_valid ON public.refresh_tokens(user_id, expires_at) WHERE revoked_at IS NULL AND expires_at > now();
+-- índices para lookup de sessões ativas (sem usar predicate)
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_expires ON public.refresh_tokens(user_id, expires_at);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked_at   ON public.refresh_tokens(revoked_at);
 
 -- migrate:down
 DROP TABLE IF EXISTS public.refresh_tokens;
