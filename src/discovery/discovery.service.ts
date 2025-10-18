@@ -6,9 +6,20 @@ export class DiscoveryService {
   constructor(private readonly db: DbService) {}
 
   async getCandidates(userId: string) {
-    // força UUID p/ não cair em overload ambiguo
     const { rows } = await this.db.query(
-      `select * from public.get_discovery_candidates_cached($1::uuid)`,
+      `
+      select u.id, u.name, u.created_at
+      from users u
+      where u.id <> $1::uuid
+        and not exists (
+          select 1
+          from swipes s
+          where s.swiper_id = $1::uuid
+            and s.target_id = u.id
+        )
+      order by u.created_at desc
+      limit 20
+      `,
       [userId]
     );
     return rows;
