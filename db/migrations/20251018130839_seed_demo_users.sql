@@ -1,9 +1,7 @@
 -- migrate:up
--- USERS A e B com perfis, localização e preferências mínimas
+-- seed demo: USERS A/B + profiles + location + prefs
 
--- IDs estáticos p/ testes
-WITH
-u AS (
+WITH u AS (
   INSERT INTO public.users (id, email)
   VALUES
     ('11111111-1111-1111-1111-111111111111', 'user_a@example.com'),
@@ -22,8 +20,8 @@ p AS (
 l AS (
   INSERT INTO public.user_location (user_id, lat, lng)
   VALUES
-    ('11111111-1111-1111-1111-111111111111', -23.5505, -46.6333), -- SP
-    ('22222222-2222-2222-2222-222222222222', -23.5614, -46.6559)  -- SP prox
+    ('11111111-1111-1111-1111-111111111111', -23.5505, -46.6333),
+    ('22222222-2222-2222-2222-222222222222', -23.5614, -46.6559)
   ON CONFLICT (user_id) DO NOTHING
   RETURNING user_id
 )
@@ -34,4 +32,4 @@ VALUES
 ON CONFLICT (user_id) DO NOTHING;
 
 -- migrate:down
--- Mantém os dados (sem down para não apagar seus testes)
+-- (sem down)
