@@ -1,33 +1,44 @@
-import { Injectable } from "@nestjs/common";
-import { DbService } from "../db.service";
+import { Injectable } from '@nestjs/common';
+import { DbService } from '../db.service';
+import { ConversationsService } from '../conversations/conversations.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly db: DbService) {}
+  constructor(
+    private readonly db: DbService,
+    private readonly convs: ConversationsService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
-  async sendMessage(matchId: number, userId: string, body: string) {
-    // confere se o user participa do match
-    const m = await this.db.query(
-      `
-      SELECT 1
-      FROM matches
-      WHERE id = $1::int AND ($2::uuid = user_a OR $2::uuid = user_b)
-      `,
-      [matchId, userId]
+  async sendMessage(matchId: number, senderId: string, body: string) {
+    const conv = await this.convs.getOrCreateByMatch(matchId);
+
+    const { rows } = await this.db.query(
+      `INSERT INTO messages (conversation_id, sender_id, body)
+       VALUES ($1, $2::uuid, $3)
+       RETURNING id, conversation_id, sender_id, body, created_at`,
+      [conv.id, senderId, body],
     );
+    const msg = rows[0];
 
-    if (m.rowCount === 0) {
-      throw new Error("not a match member");
-    }
-
-    await this.db.query(
-      `
-      INSERT INTO messages (match_id, sender_id, body)
-      VALUES ($1::int, $2::uuid, $3::text)
-      `,
-      [matchId, userId, body]
+    // Descobrir o destinatário a partir do match
+    const { rows: mRows } = await this.db.query(
+      `SELECT user_a, user_b FROM matches WHERE id=$1`,
+      [matchId],
     );
+    const m = mRows[0];
+    const recipient =
+      m.user_a === senderId ? m.user_b : m.user_a;
 
-    return { ok: true };
+    // notificação in-app
+    await this.notifications.create(recipient, 'message', {
+      matchId,
+      conversationId: conv.id,
+      preview: body.slice(0, 120),
+      from: senderId,
+    });
+
+    return msg;
   }
 }

@@ -1,36 +1,31 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
-import { ChatService } from "./chat.service";
-import { UserId } from "../auth/user-id.decorator";
-import { DbService } from "../db.service";
+import { Body, Controller, Get, Headers, Param, Post, ParseIntPipe } from '@nestjs/common';
+import { DbService } from '../db.service';
+import { ChatService } from './chat.service';
+import { ConversationsService } from '../conversations/conversations.service';
 
-@Controller("chat")
+@Controller('chat')
 export class ChatController {
-  constructor(private readonly svc: ChatService, private readonly db: DbService) {}
+  constructor(
+    private readonly chat: ChatService,
+    private readonly convs: ConversationsService,
+    private readonly db: DbService,
+  ) {}
 
-  @Post(":matchId/message")
+  @Post(':matchId/message')
   async send(
-    @Param("matchId") matchId: string,
-    @UserId() userId: string,
-    @Body() dto: { body: string }
+    @Param('matchId', ParseIntPipe) matchId: number,
+    @Headers('x-user-id') userId: string,
+    @Body() body: { body: string },
   ) {
-    await this.svc.sendMessage(Number(matchId), userId, dto.body);
-    return { ok: true };
+    return this.chat.sendMessage(matchId, userId, body.body);
   }
 
-  // opcional: listar mensagens p/ debugar rápido
-  @Get(":matchId")
-  async list(@Param("matchId") matchId: string, @UserId() userId: string) {
-    // (mesma checagem de participação)
-    const ok = await this.db.query(
-      `select 1 from matches where id=$1::int and ($2::uuid=user_a or $2::uuid=user_b)`,
-      [matchId, userId]
-    );
-    if (ok.rowCount === 0) throw new Error("not a match member");
-
-    const { rows } = await this.db.query(
-      `select id, sender_id, body, created_at from messages where match_id=$1::int order by created_at asc`,
-      [matchId]
-    );
-    return rows;
+  @Get(':matchId')
+  async history(
+    @Param('matchId', ParseIntPipe) matchId: number,
+  ) {
+    const conv = await this.convs.findByMatch(matchId);
+    if (!conv) return [];
+    return this.convs.listMessages(conv.id, 50);
   }
 }
