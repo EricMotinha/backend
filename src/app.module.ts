@@ -11,6 +11,7 @@ import { SwipesModule } from "./swipes/swipes.module";
 import { MatchesModule } from "./matches/matches.module";
 import { ChatModule } from "./chat/chat.module";
 import { LocationsModule } from "./locations/locations.module";
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { LocationsModule } from "./locations/locations.module";
     AuthModule,
     ProfilesModule,
     PreferencesModule,
-    LocationsModule, DiscoveryModule, SwipesModule, MatchesModule, ChatModule,],
+    LocationsModule, DiscoveryModule, SwipesModule, MatchesModule, ChatModule, NotificationsModule,],
   controllers: [AppController],
 })
 export class AppModule {}
