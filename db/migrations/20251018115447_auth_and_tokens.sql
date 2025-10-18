@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS public.refresh_tokens (
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON public.refresh_tokens(user_id);
 -- índices para lookup de sessões ativas (sem usar predicate)
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_expires ON public.refresh_tokens(user_id, expires_at);
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked_at   ON public.refresh_tokens(revoked_at);
 
 -- migrate:down
 DROP TABLE IF EXISTS public.refresh_tokens;
