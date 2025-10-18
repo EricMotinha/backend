@@ -1,4 +1,3 @@
-// src/matches/matches.service.ts
 import { Injectable } from "@nestjs/common";
 import { DbService } from "../db.service";
 
@@ -6,7 +5,7 @@ import { DbService } from "../db.service";
 export class MatchesService {
   constructor(private readonly db: DbService) {}
 
-  async listForUser(userId: string) {
+  async list(userId: string) {
     const { rows } = await this.db.query(
       `select id, user_a, user_b, created_at
        from matches

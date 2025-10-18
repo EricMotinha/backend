@@ -1,20 +1,20 @@
-// src/swipes/swipes.service.ts
 import { Injectable } from "@nestjs/common";
 import { DbService } from "../db.service";
+
+type SwipeDirection = "like" | "pass";
 
 @Injectable()
 export class SwipesService {
   constructor(private readonly db: DbService) {}
 
-  async createSwipe(swiperId: string, targetId: string, direction: "like" | "pass") {
-    // grava o swipe
+  async createSwipe(swiperId: string, targetId: string, direction: SwipeDirection) {
     await this.db.query(
       `insert into swipes (swiper_id, target_id, direction)
        values ($1::uuid, $2::uuid, $3::text)`,
       [swiperId, targetId, direction]
     );
 
-    // se for "like", verifica match recíproco (target já deu like no swiper)
+    // se já existia like recíproco, cria match
     const match = await this.db.query<{ id: number }>(
       `with mutual as (
          select 1
@@ -32,5 +32,17 @@ export class SwipesService {
     );
 
     return { ok: true, matched: match.rowCount > 0, matchId: match.rows[0]?.id };
+  }
+
+  async recent(userId: string) {
+    const { rows } = await this.db.query(
+      `select id, swiper_id, target_id, direction, created_at
+       from swipes
+       where swiper_id = $1::uuid
+       order by created_at desc
+       limit 20`,
+      [userId]
+    );
+    return rows;
   }
 }

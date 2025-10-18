@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Post } from "@nestjs/common";
 import { SwipesService } from "./swipes.service";
-import { RequestUserId } from "../common/request-user.decorator";
 
-class CreateSwipeDto {
+type ApiDirection = "like" | "dislike" | "superlike";
+
+class SwipeDto {
   targetId!: string;
-  direction!: "like" | "dislike" | "superlike";
+  direction!: ApiDirection;
 }
 
 @Controller("swipes")
@@ -12,12 +13,15 @@ export class SwipesController {
   constructor(private readonly svc: SwipesService) {}
 
   @Post()
-  async create(@RequestUserId() userId: string, @Body() dto: CreateSwipeDto) {
-    return this.svc.createSwipe(userId, dto.targetId, dto.direction);
+  async create(@Headers("x-user-id") userId: string, @Body() dto: SwipeDto) {
+    // normaliza: dislike/superlike viram "pass" ou "like" conforme regra atual
+    const normalized: "like" | "pass" =
+      dto.direction === "like" ? "like" : "pass";
+    return this.svc.createSwipe(userId, dto.targetId, normalized);
   }
 
   @Get("recent")
-  async recent(@RequestUserId() userId: string) {
+  recent(@Headers("x-user-id") userId: string) {
     return this.svc.recent(userId);
   }
 }
