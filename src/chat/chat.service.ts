@@ -1,3 +1,9 @@
+import { Injectable } from '@nestjs/common';
+import { DbService } from '../db.service';
+import { ConversationsService } from '../conversations/conversations.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { ChatEvents } from './chat.gateway';
+
 @Injectable()
 export class ChatService {
   constructor(

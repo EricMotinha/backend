@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+// src/conversations/conversations.service.ts
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService } from '../db.service';
 
 @Injectable()
@@ -6,36 +7,25 @@ export class ConversationsService {
   constructor(private readonly db: DbService) {}
 
   async getOrCreateByMatch(matchId: number) {
-    const found = await this.db.query(
-      `SELECT id, match_id, created_at FROM conversations WHERE match_id=$1`,
+    // 1) garante que o match existe
+    const { rows: m } = await this.db.query(
+      'SELECT id FROM matches WHERE id = $1',
       [matchId],
     );
-    if (found.rowCount) return found.rows[0];
+    if (m.length === 0) {
+      throw new NotFoundException(`match ${matchId} not found`);
+    }
 
-    const created = await this.db.query(
-      `INSERT INTO conversations (match_id) VALUES ($1) RETURNING id, match_id, created_at`,
-      [matchId],
-    );
-    return created.rows[0];
-  }
-
-  async findByMatch(matchId: number) {
+    // 2) cria se não existir e SEMPRE retorna a conversa
     const { rows } = await this.db.query(
-      `SELECT id, match_id, created_at FROM conversations WHERE match_id=$1`,
+      `INSERT INTO conversations (match_id)
+       VALUES ($1)
+       ON CONFLICT (match_id)
+       DO UPDATE SET match_id = EXCLUDED.match_id
+       RETURNING id, match_id`,
       [matchId],
     );
-    return rows[0] ?? null;
-  }
 
-  async listMessages(conversationId: number, limit = 50) {
-    const { rows } = await this.db.query(
-      `SELECT id, sender_id, body, created_at
-       FROM messages
-       WHERE conversation_id=$1
-       ORDER BY created_at DESC
-       LIMIT $2`,
-      [conversationId, limit],
-    );
-    return rows.reverse();
+    return rows[0];
   }
 }
