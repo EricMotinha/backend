@@ -1,7 +1,9 @@
 // chat.controller.ts
 import {
-  Controller, Get, Post, Body, Param, ParseIntPipe, Headers, Sse, MessageEvent, BadRequestException,
+  Controller, Get, Post, Body, Param, ParseIntPipe, Headers, Sse,
+  MessageEvent, BadRequestException, Query, Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { Observable, from } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { ChatService } from './chat.service';
@@ -16,15 +18,26 @@ export class ChatController {
     private readonly events: ChatEvents,
   ) {}
 
-  // chat.controller.ts
   @Get(':matchId')
-   async list(
-   @Param('matchId', ParseIntPipe) matchId: number,
-   ) {
-    const conv = await this.convs.getOrCreateByMatch(matchId);
-  return await this.chat.getMessagesByConversationId(conv.id);
-     }
+  async list(
+    @Param('matchId', ParseIntPipe) matchId: number,
+    @Query('limit') limitRaw?: string,
+    @Query('before') before?: string,
+    @Query('beforeId') beforeIdRaw?: string,
+    @Res({ passthrough: true }) res?: Response,
+  ) {
+    const limit = Math.min(Math.max(parseInt(limitRaw ?? '50', 10), 1), 200);
+    const beforeId = beforeIdRaw ? parseInt(beforeIdRaw, 10) : undefined;
 
+    const conv = await this.convs.getOrCreateByMatch(matchId);
+    const { items, nextCursor } = await this.chat.getMessagesByConversationId(
+      conv.id,
+      { limit, before, beforeId },
+    );
+
+    if (nextCursor) res?.setHeader('x-next-cursor', nextCursor);
+    return items; // mantém compatível com seu uso atual via curl
+  }
 
   @Post(':matchId/message')
   async send(
