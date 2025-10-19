@@ -41,14 +41,16 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^9.38.0",
     "@nestjs/cli": "^10.4.5",
     "@nestjs/schematics": "^10.2.1",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.7.5",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
-    "eslint": "^9.13.0",
-    "typescript": "^5.9.3"
+    "eslint": "^9.38.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.1"
   },
   "engines": {
     "node": ">=20"
