@@ -7,25 +7,27 @@ export class ConversationsService {
   constructor(private readonly db: DbService) {}
 
   async getOrCreateByMatch(matchId: number) {
-    // 1) garante que o match existe
-    const { rows: m } = await this.db.query(
-      'SELECT id FROM matches WHERE id = $1',
+    const { rows } = await this.db.query(
+      `
+      WITH existing AS (
+        SELECT id, match_id FROM conversations WHERE match_id = $1
+      ),
+      ins AS (
+        INSERT INTO conversations (match_id)
+        SELECT id FROM matches WHERE id = $1
+        ON CONFLICT (match_id) DO NOTHING
+        RETURNING id, match_id
+      )
+      SELECT id, match_id FROM existing
+      UNION ALL
+      SELECT id, match_id FROM ins
+      `,
       [matchId],
     );
-    if (m.length === 0) {
+
+    if (rows.length === 0) {
       throw new NotFoundException(`match ${matchId} not found`);
     }
-
-    // 2) cria se não existir e SEMPRE retorna a conversa
-    const { rows } = await this.db.query(
-      `INSERT INTO conversations (match_id)
-       VALUES ($1)
-       ON CONFLICT (match_id)
-       DO UPDATE SET match_id = EXCLUDED.match_id
-       RETURNING id, match_id`,
-      [matchId],
-    );
-
     return rows[0];
   }
 }

@@ -13,16 +13,16 @@ export class ChatService {
     private readonly events: ChatEvents,
   ) {}
 
-  async getMessagesByConversationId(conversationId: number) {
-    const { rows } = await this.db.query(
-      `SELECT id, conversation_id, sender_id, body, created_at
-         FROM messages
-        WHERE conversation_id = $1
-        ORDER BY created_at ASC`,
-      [conversationId],
-    );
-    return rows;
-  }
+async getMessagesByConversationId(conversationId: number) {
+  const { rows } = await this.db.query(
+    `SELECT id, conversation_id, sender_id, body, created_at
+       FROM messages
+      WHERE conversation_id = $1
+      ORDER BY created_at ASC`,
+    [conversationId],
+  );
+  return rows;
+}
 
   async sendMessage(matchId: number, senderId: string, body: string) {
     const conv = await this.convs.getOrCreateByMatch(matchId);
