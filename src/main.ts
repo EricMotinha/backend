@@ -1,12 +1,43 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  // bufferLogs para capturar logs de bootstrap no Pino
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  // prefixo global opcional (ex.: /api)
-  // app.setGlobalPrefix('api');
+  // Logger Pino do nestjs-pino
+  app.useLogger(app.get(Logger));
+
+  // Segurança
+  app.use(helmet());
+
+  // CORS (Fly/SPA amigável)
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,POST,PUT,DELETE,OPTIONS',
+    allowedHeaders: '*',
+    exposedHeaders: ['x-next-cursor'],
+    credentials: false,
+  });
+
+  // Métrica mínima por rota (em memória)
+  const counts = new Map<string, number>();
+  app.use((req, _res, next) => {
+    // req.path = '/chat/3' etc.
+    const key = `${req.method} ${req.path}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    next();
+  });
+
+  // Endpoint /metrics simples (JSON) — Express adapter
+  const http = app.getHttpAdapter();
+  http.getInstance().get('/metrics', (_req, res) => {
+    res.json(Object.fromEntries(counts.entries()));
+  });
 
   // Swagger em /docs
   const config = new DocumentBuilder()
@@ -18,11 +49,7 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   const port = Number(process.env.PORT) || 8080;
-  await app.listen(process.env.PORT || 8080, "0.0.0.0");
-  // log simples pra inspeção remota
+  await app.listen(port, '0.0.0.0');
   console.log(`API up on 0.0.0.0:${port} — Swagger at /docs`);
 }
 bootstrap();
-
-
-
