@@ -1,55 +1,51 @@
-name: Deploy Staging
+# .github/workflows/deploy-staging.yml (trecho essencial)
+name: Deploy to Staging
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  migrate-and-deploy:
+  build-test-deploy:
     runs-on: ubuntu-latest
-    environment: { name: staging }
-    defaults:
-      run:
-        working-directory: ./backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: casamenteiro_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/casamenteiro_ci?sslmode=disable
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Install
+        run: npm ci
 
-      - name: Install dbmate + psql
-        run: |
-          curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
-          sudo chmod +x /usr/local/bin/dbmate
-          sudo apt-get update -y && sudo apt-get install -y postgresql-client
+      - name: Lint
+        run: npm run lint
 
-      - name: Sanity (DATABASE_URL)
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        run: |
-          [ -z "$DATABASE_URL" ] && echo "DATABASE_URL vazio" && exit 1
-          if echo "$DATABASE_URL" | grep -qiE '@(localhost|127\.0\.0\.1)'; then
-            echo "Recusando localhost em CI"; exit 1
-          fi
+      - name: Test
+        run: npm test
 
-      - name: Smoke test psql
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        run: psql "$DATABASE_URL" -tAc "select 1;"
-
-      - name: Run migrations (dbmate up)
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      - name: Migrate (dbmate)
         run: dbmate up
 
-      - name: Deploy to Fly
+      - name: Build
+        run: npm run build
+
+      - name: Docker build
+        run: docker build -t casamenteiro-backend:ci .
+
+      - name: Deploy (Fly)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          curl -L https://fly.io/install.sh | sh
-          export FLYCTL_INSTALL="$HOME/.fly"
-          export PATH="$FLYCTL_INSTALL/bin:$PATH"
-          flyctl deploy --remote-only --config ./fly.toml --app backend-jdzi8w
+        run: flyctl deploy --remote-only -a backend-jdzi8w -c ./fly.toml
