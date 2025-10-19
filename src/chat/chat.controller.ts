@@ -16,11 +16,15 @@ export class ChatController {
     private readonly events: ChatEvents,
   ) {}
 
+  // chat.controller.ts
   @Get(':matchId')
-  async listMessages(@Param('matchId', ParseIntPipe) matchId: number) {
+   async list(
+   @Param('matchId', ParseIntPipe) matchId: number,
+   ) {
     const conv = await this.convs.getOrCreateByMatch(matchId);
-    return this.chat.getMessagesByConversationId(conv.id);
-  }
+  return await this.chat.getMessagesByConversationId(conv.id);
+     }
+
 
   @Post(':matchId/message')
   async send(

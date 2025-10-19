@@ -1,28 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { DbService } from '../db.service';
-import { ConversationsService } from '../conversations/conversations.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { ChatEvents } from './chat.gateway';
-
 @Injectable()
 export class ChatService {
   constructor(
     private readonly db: DbService,
-    private readonly convs: ConversationsService, // <-- sem "?"
+    private readonly convs: ConversationsService,
     private readonly notifications: NotificationsService,
     private readonly events: ChatEvents,
   ) {}
 
- async getMessagesByConversationId(conversationId: number) {
-  // IMPLEMENTAÇÃO REAL (se você usa Prisma):
-  // return this.db.message.findMany({
-  //   where: { conversationId },
-  //   orderBy: { createdAt: 'asc' },
-  // });
+  async getMessagesByConversationId(conversationId: number) {
+    const { rows } = await this.db.query(
+      `SELECT id, conversation_id, sender_id, body, created_at
+         FROM messages
+        WHERE conversation_id = $1
+        ORDER BY created_at ASC`,
+      [conversationId],
+    );
+    return rows;
+  }
 
-  // Placeholder temporário para compilar e subir:
-  return [];
- }
   async sendMessage(matchId: number, senderId: string, body: string) {
     const conv = await this.convs.getOrCreateByMatch(matchId);
 
@@ -48,7 +43,6 @@ export class ChatService {
       from: senderId,
     });
 
-    // publicar no SSE
     this.events.publish({
       conversationId: conv.id,
       payload: { type: 'message', data: msg },
