@@ -1,44 +1,36 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
-import { UserId } from "../auth/user-id.decorator";
-import { SwipesService } from "./swipes.service";
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // ajuste o caminho
-import { CurrentUser } from '../auth/current-user.decorator';
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+// src/swipes/swipes.controller.ts
+import { Controller, Post, Body, Get } from '@nestjs/common';
+import { DbService } from '../db.service';
 
-type AnyDir = "like" | "dislike" | "superlike" | "pass";
-@UseGuards(JwtAuthGuard)
+type Direction = 'left' | 'right';
+
 @Controller('swipes')
 export class SwipesController {
-  constructor(private readonly service: SwipesService) {}
-
-  @Post()
-  create(
-    @CurrentUser() user: { id: string },
-    @Body() dto: { targetId: string; direction: 1 | -1 },
-  ) {
-    return this.service.create({
-      swiperId: user.id,
-      targetId: dto.targetId,
-      direction: dto.direction,
-    });
-  }
-}
-@Controller("swipes")
-export class SwipesController {
-  constructor(private readonly svc: SwipesService) {}
+  constructor(private readonly db: DbService) {}
 
   @Post()
   async create(
-    @UserId() userId: string,
-    @Body() dto: { targetId: string; direction: AnyDir }
+    @Body() dto: { swiper_id: string; target_user_id: string; direction: Direction },
   ) {
-    // normaliza: tudo que não for "like" vira "dislike"
-    const normalized: "like" | "dislike" = dto.direction === "like" ? "like" : "dislike";
-    return this.svc.createSwipe(userId, dto.targetId, normalized);
+    // TODO: trocar para SwipesService quando estiver pronto
+    const { rows } = await this.db.query(
+      `INSERT INTO swipes (swiper_id, target_user_id, direction)
+       VALUES ($1::uuid, $2::uuid, $3)
+       RETURNING id, swiper_id, target_user_id, direction, created_at`,
+      [dto.swiper_id, dto.target_user_id, dto.direction],
+    );
+    return rows[0];
   }
 
-  @Get("recent")
-  recent(@UserId() userId: string) {
-    return this.svc.listRecent(userId);
+  @Get('recent')
+  async recent() {
+    const { rows } = await this.db.query(
+      `SELECT id, swiper_id, target_user_id, direction, created_at
+         FROM swipes
+        ORDER BY created_at DESC
+        LIMIT 50`,
+      [],
+    );
+    return rows;
   }
 }
