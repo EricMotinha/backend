@@ -1,32 +1,45 @@
-// src/app.module.ts
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import { Pool } from 'pg';
+import { DbService } from './db.service';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
-import { DbModule } from './db.module';
-// importe seus módulos já existentes (AuthModule, UsersModule etc.)
-
+@Global()
 @Module({
   imports: [
-    DbModule,
     LoggerModule.forRoot({
-      pinoHttp: {
-        transport:
-          process.env.NODE_ENV !== 'production'
-            ? { target: 'pino-pretty', options: { singleLine: true } }
-            : undefined,
-        // exemplo de redaction:
-        redact: ['req.headers.authorization', 'req.headers.cookie'],
-      },
+      // Em dev imprime “bonitinho”; em prod sai NDJSON estruturado
+      pinoHttp: process.env.NODE_ENV === 'production'
+        ? { level: process.env.LOG_LEVEL ?? 'info' }
+        : {
+            level: 'debug',
+            transport: { target: 'pino-pretty', options: { colorize: true } },
+          },
     }),
-    ThrottlerModule.forRoot([ // 100 req/1min por IP (ajuste se quiser)
-      { ttl: 60_000, limit: 100 },
-    ]),
-    // ...seus outros módulos
+    ThrottlerModule.forRoot({
+      ttl: 60,           // janela de 60s
+      limit: 120,        // 120 req/min por IP (ajusta depois por rota se quiser)
+      ignoreUserAgents: [/ELB-HealthChecker/i], // opcional
+    }),
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard }, // rate-limit global
+    DbService,
+    {
+      provide: 'PG_POOL',
+      useFactory: () => {
+        const cs = process.env.DATABASE_URL;
+        if (!cs) throw new Error('DATABASE_URL not set');
+        return new Pool({
+          connectionString: cs,
+          ssl: { rejectUnauthorized: false },
+          max: 10,
+          idleTimeoutMillis: 30000,
+        });
+      },
+    },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
+  exports: [DbService, 'PG_POOL', LoggerModule],
 })
-export class AppModule {}
+export class DbModule {}

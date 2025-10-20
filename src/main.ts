@@ -6,13 +6,24 @@ import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    cors: true,
-    bufferLogs: true,
+    bufferLogs: true,   // permite logger antes do app estar pronto
   });
+  app.useLogger(app.get(Logger)); // pino como logger do Nest
 
-  app.useLogger(app.get(Logger));
+  // Segurança básica
   app.use(helmet());
 
+  // CORS (ajusta origins depois)
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization,x-user-id',
+    exposedHeaders: 'x-next-cursor',
+    credentials: false,
+    maxAge: 600,
+  });
+
+  // Swagger em /docs
   const config = new DocumentBuilder()
     .setTitle('Casamenteiro API v1')
     .setDescription('Endpoints da API v1 do Casamenteiro')
