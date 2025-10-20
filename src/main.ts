@@ -1,29 +1,43 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
+import helmet from 'helmet';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
 
-  // Helmet (security headers)
-  app.use(helmet());
-
-  // Logger do pino como logger da aplicação
+  // Logger Pino integrado
   app.useLogger(app.get(Logger));
 
-  // Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Casamenteiro API v1')
-    .setDescription('Endpoints da API v1 do Casamenteiro')
-    .setVersion('1.0.0')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  // Segurança básica
+  app.use(helmet());
 
-  const port = Number(process.env.PORT) || 8080;
-  await app.listen(port, "0.0.0.0");
-  console.log(`API up on 0.0.0.0:${port} — Swagger at /docs`);
+  // CORS (ajuste origins conforme seu mobile/web)
+  app.enableCors({
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:19006',
+      // adicione seu domínio de staging/produção aqui
+    ],
+    credentials: true,
+  });
+
+  // Opcional: prefixo global
+  // app.setGlobalPrefix('api');
+
+  // Swagger (se você já tinha setup em outro arquivo, pode manter)
+  // Ex.: swaggerSetup(app);
+
+  const port = parseInt(process.env.PORT ?? '8080', 10);
+  await app.listen(port, '0.0.0.0');
+
+  const url = await app.getUrl();
+  const logger = app.get(Logger);
+  logger.log(`API up on ${url.replace('0.0.0.0', 'localhost')} — Swagger at /docs`);
 }
+
 bootstrap();
