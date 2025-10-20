@@ -18,12 +18,13 @@ import { HealthController } from './health.controller';
           ? { level: process.env.LOG_LEVEL ?? 'info' }
           : { level: 'debug', transport: { target: 'pino-pretty', options: { colorize: true } } },
     }),
-    ThrottlerModule.forRoot({
-      ttl: 60,
-      limit: 120,
-      ignoreUserAgents: [/ELB-HealthChecker/i],
-    }),
-  ],
+    ThrottlerModule.forRoot([
+  {
+    ttl: 60_000, // 60s em ms
+    limit: 120,
+    ignoreUserAgents: [/ELB-HealthChecker/i],
+  },
+]),
   controllers: [HealthController],
   providers: [
     DbService,
