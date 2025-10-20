@@ -1,34 +1,29 @@
 app = "backend-jdzi8w"
 primary_region = "gru"
 
-[build]
-  dockerfile = "Dockerfile"
+# Opcional: só se você precisar de buildpacks em vez de Dockerfile
+# [build]
 
-[env]
-  NODE_ENV = "production"
-  PORT = "8080"
-
-[[services]]
+[http_service]
   internal_port = 8080
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = true
+  min_machines_running = 1
   processes = ["app"]
-  protocol = "tcp"
 
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
+  # Handlers padrão (TLS na 443 e HTTP na 80)
+  [[http_service.handlers]]
+    handler = "tls"
 
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
+  [[http_service.handlers]]
+    handler = "http"
 
-  [services.concurrency]
-    type = "requests"
-    soft_limit = 20
-    hard_limit = 40
-
-  [[services.http_checks]]
+  # Health check HTTP -> /healthz
+  [[http_service.checks]]
+    type = "http"
     interval = "15s"
     timeout = "2s"
-    grace_period = "10s"
     method = "GET"
     path = "/healthz"
+    grace_period = "10s"
