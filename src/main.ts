@@ -5,18 +5,11 @@ import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    cors: true,
-    bufferLogs: true,
-  });
+  const app = await NestFactory.create(AppModule, { cors: true, bufferLogs: true });
 
-  // Logger (pino)
   app.useLogger(app.get(Logger));
-
-  // Segurança
   app.use(helmet());
 
-  // Swagger em /docs
   const config = new DocumentBuilder()
     .setTitle('Casamenteiro API v1')
     .setDescription('Endpoints da API v1 do Casamenteiro')
@@ -26,7 +19,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  // Porta padrão
   const port = Number(process.env.PORT) || 8080;
   await app.listen(port, '0.0.0.0');
 
