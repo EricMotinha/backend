@@ -1,7 +1,12 @@
 // src/health.controller.ts
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
+
 @Controller()
 export class HealthController {
   @Get('healthz')
-  health() { return { ok: true, ts: new Date().toISOString() }; }
+  @SkipThrottle()
+  health() {
+    return { ok: true };
+  }
 }
