@@ -1,9 +1,13 @@
+// src/app.module.ts
 import { Global, Module } from "@nestjs/common";
-import { DbService } from "./db.service";
-import { Pool } from "pg";
-import { LoggerModule } from "nestjs-pino"; // <-- novo
-import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler"; // rate-limit
 import { APP_GUARD } from "@nestjs/core";
+import { Pool } from "pg";
+import { randomUUID } from "node:crypto";
+
+import { LoggerModule } from "nestjs-pino";
+import { ThrottlerModule, ThrottlerGuard, seconds } from "@nestjs/throttler";
+
+import { DbService } from "./db.service";
 
 @Global()
 @Module({
@@ -12,8 +16,9 @@ import { APP_GUARD } from "@nestjs/core";
     LoggerModule.forRoot({
       pinoHttp: process.env.NODE_ENV === "production"
         ? {
-            // exemplos: gerar id por req e esconder headers sensíveis
-            genReqId: (req) => req.headers["x-request-id"] as string || crypto.randomUUID(),
+            // id por requisição e ocultar headers sensíveis
+            genReqId: (req) =>
+              (req.headers["x-request-id"] as string) || randomUUID(),
             redact: ["req.headers.authorization", "res.headers.set-cookie"],
           }
         : {
@@ -25,11 +30,28 @@ import { APP_GUARD } from "@nestjs/core";
           },
     }),
 
-    // Rate-limit global simples: 100 req/min por IP
+    // Rate-limit global (novo formato do @nestjs/throttler)
     ThrottlerModule.forRoot({
-      ttl: 60,
-      limit: 100,
+      throttlers: [
+        {
+          ttl: seconds(60), // janela de 60s
+          limit: 100,       // até 100 req/IP por janela
+        },
+      ],
     }),
+
+    // Se você tiver outros módulos (AuthModule, UsersModule, etc.),
+    // mantenha-os importados aqui também:
+    // AuthModule,
+    // UsersModule,
+    // ProfilesModule,
+    // PreferencesModule,
+    // LocationsModule,
+    // DiscoveryModule,
+    // SwipesModule,
+    // MatchesModule,
+    // ChatModule,
+    // NotificationsModule,
   ],
   providers: [
     DbService,
@@ -42,7 +64,7 @@ import { APP_GUARD } from "@nestjs/core";
           connectionString: cs,
           ssl: { rejectUnauthorized: false },
           max: 10,
-          idleTimeoutMillis: 30000,
+          idleTimeoutMillis: 30_000,
         });
       },
     },
@@ -51,4 +73,4 @@ import { APP_GUARD } from "@nestjs/core";
   ],
   exports: [DbService, "PG_POOL"],
 })
-export class DbModule {}
+export class AppModule {}
